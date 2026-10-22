@@ -1,7 +1,323 @@
 <!doctype html>
 <html lang="en">
 <head>
+<meta charset="utf-8"><!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101827">
+<title>NEXUS AI — Permission-first assistant</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d30;--line:#293750;--text:#edf3ff;--muted:#9eb0ca;--accent:#7dd3fc;--danger:#fda4af;--ok:#86efac}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#0b1220,#101b2e);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:760px;margin:auto;padding:18px}.top{display:flex;align-items:center;gap:12px;margin:8px 0 18px}.logo{width:44px;height:44px;border-radius:14px;background:#17314b;display:grid;place-items:center;font-size:23px}.sub,.muted{color:var(--muted);font-size:13px}
+h1{font-size:22px;margin:0}h2{font-size:16px;margin:0 0 12px}.panel{background:rgba(18,29,48,.94);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}
+.statuses{display:grid;grid-template-columns:1fr 1fr;gap:8px}.status{border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px;display:flex;justify-content:space-between;gap:8px}.off{color:var(--ok);font-weight:700}.blocked{color:var(--danger);font-weight:700}
+#chat{min-height:150px;max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px}.msg{padding:11px 13px;border-radius:14px;max-width:92%;white-space:pre-wrap;overflow-wrap:anywhere}.bot{background:#1b2a41;align-self:flex-start}.user{background:#164e63;align-self:flex-end}
+textarea,input{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:#0b1423;color:var(--text);font:inherit}textarea{min-height:76px;resize:vertical}
+button{border:0;border-radius:12px;padding:11px 14px;background:var(--accent);color:#082033;font-weight:750;font-size:14px;cursor:pointer}button.secondary{background:#26364e;color:var(--text);border:1px solid #3b4b65}button.danger{background:#4b1e2a;color:#ffe1e6;border:1px solid #8b3548}button:focus,input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:2px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.notice{border-left:3px solid var(--accent);padding:9px 11px;background:#14263a;color:#d8e8fa;font-size:13px;border-radius:7px}.hidden{display:none!important}.log{font-size:13px;color:var(--muted);padding:7px 0;border-bottom:1px solid var(--line)}.foot{font-size:12px;color:var(--muted);line-height:1.5}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:7px}
+@media(max-width:480px){main{padding:12px}.statuses{grid-template-columns:1fr}.panel{padding:13px}}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div class="logo" aria-hidden="true">◈</div>
+    <div><h1>NEXUS AI</h1><div class="sub">Personal assistant · Permission-first prototype</div></div>
+  </header>
+
+  <section class="panel">
+    <h2>Security dashboard</h2>
+    <div class="statuses">
+      <div class="status"><span>AI chat</span><span id="aiStatus" class="off">NOT CONNECTED</span></div>
+      <div class="status"><span>Online research</span><span id="netStatus" class="off">OFF</span></div>
+      <div class="status"><span>Device access</span><span class="off">OFF</span></div>
+      <div class="status"><span>File access</span><span class="off">OFF</span></div>
+      <div class="status"><span>Trading / transactions</span><span class="blocked">BLOCKED</span></div>
+    </div>
+    <p class="notice" style="margin-bottom:0">This first version makes no automatic network requests. Research only opens after you approve a specific query.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Language / भाषा</h2>
+    <label for="languageSelect">Reply language</label>
+    <select id="languageSelect" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;background:#0b1423;color:var(--text);font:inherit">
+      <option value="auto" selected>Automatic / अपने-आप पहचानें</option>
+      <option value="hi">हिन्दी (Hindi)</option>
+      <option value="hinglish">Hinglish</option>
+      <option value="en">English</option>
+    </select>
+    <p class="muted" id="languageHelp">Auto mode: NEXUS AI will try to reply in the language you use.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Chat / बातचीत</h2>
+    <div id="chat" aria-live="polite">
+      <div class="msg bot">Namaste! Main NEXUS AI ka offline starter prototype hoon. Main basic help, planning aur research query draft kar sakta hoon. Mere paas abhi full language-model intelligence nahi hai.</div>
+    </div>
+    <label for="message" id="messageLabel">Apna message likho</label>
+    <textarea id="message" placeholder="Apna sawaal likhein / Ask a question" ></textarea>
+    <div class="actions">
+      <button id="sendBtn">Send message</button>
+      <button id="clearBtn" class="secondary">Clear chat</button>
+    </div>
+  </section>
+
+  <section id="approvalPanel" class="panel hidden" aria-live="polite">
+    <h2>Permission required</h2>
+    <p>Ye query tumhare browser ke bahar search page kholegi. Approve karne par search provider ko query aur tumhara usual browser request data dikh sakta hai.</p>
+    <label for="query">Proposed search query</label>
+    <input id="query" maxlength="180">
+    <div class="actions">
+      <button id="approveBtn">Approve & open search</button>
+      <button id="cancelBtn" class="secondary">Cancel</button>
+    </div>
+    <p class="muted">Approval sirf is ek search ke liye hai. Ye app background mein search nahi karega.</p>
+  </section>
+
+  <section class="panel">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+      <h2>Activity log</h2>
+      <button id="stopBtn" class="danger">Emergency stop</button>
+    </div>
+    <p id="stopState" class="notice">Tools enabled for this session, but all real tools are currently absent.</p>
+    <div id="log"></div>
+    <div class="actions"><button id="resumeBtn" class="secondary hidden">Resume local chat</button><button id="clearLogBtn" class="secondary">Clear log</button></div>
+  </section>
+  <p class="foot" id="footNote">Prototype mode: real AI is not connected until you deploy the private backend and add its Worker URL in this file. Messages are sent to AI only after you press Send. Device/file access stays OFF; trading and transactions remain BLOCKED. Never enter passwords, API keys, or sensitive information.</p>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  // After deploying the Cloudflare Worker, paste its HTTPS URL here.
+  // Keep the Gemini API key ONLY in Cloudflare Worker Secrets, never in this file.
+  const AI_ENDPOINT = "PASTE_YOUR_CLOUDFLARE_WORKER_URL_HERE";
+  let pendingQuery = "";
+  let stopped = false;
+  const chat = $("chat"), logBox = $("log");
+  const languageSelect = $("languageSelect");
+
+  const ui = {
+    en: {
+      languageHelp: "Auto mode: NEXUS AI will try to reply in the language you use.",
+      messageLabel: "Your message",
+      placeholder: "Ask a question or describe what you need",
+      send: "Send message", clear: "Clear chat",
+      permissionTitle: "Permission required",
+      permissionText: "This query will open an external search page. The search provider may receive your query and normal browser request data.",
+      queryLabel: "Proposed search query", approve: "Approve & open search", cancel: "Cancel",
+      approvalNote: "Approval applies only to this one search. No background searching.",
+      greeting: "Hello! Choose a language above. Send a message to use AI after the private backend is connected. Until then, this is a limited local prototype.",
+      foot: "Prototype mode: real AI is not connected until you deploy the private backend and add its Worker URL in this file. Messages are sent to AI only after you press Send. Device/file access stays OFF; trading and transactions remain BLOCKED. Never enter passwords, API keys, or sensitive information."
+    },
+    hi: {
+      languageHelp: "अपने-आप मोड में NEXUS AI आपके संदेश की भाषा पहचानकर उसी भाषा में जवाब देने की कोशिश करेगा।",
+      messageLabel: "अपना संदेश लिखें",
+      placeholder: "अपना सवाल या ज़रूरत लिखें",
+      send: "संदेश भेजें", clear: "चैट साफ़ करें",
+      permissionTitle: "अनुमति ज़रूरी है",
+      permissionText: "यह खोज बाहरी सर्च पेज खोलेगी। सर्च सेवा को आपका सवाल और सामान्य ब्राउज़र अनुरोध डेटा मिल सकता है।",
+      queryLabel: "खोजने के लिए सवाल", approve: "अनुमति दें और खोज खोलें", cancel: "रद्द करें",
+      approvalNote: "अनुमति केवल इस एक खोज के लिए है। बैकग्राउंड में खोज नहीं होगी।",
+      greeting: "नमस्ते! ऊपर अपनी भाषा चुनें। प्राइवेट बैकएंड जुड़ने के बाद संदेश भेजकर AI इस्तेमाल कर सकेंगे। अभी यह सीमित लोकल प्रोटोटाइप है।",
+      foot: "प्रोटोटाइप मोड: असली AI तभी जुड़ेगा जब आप प्राइवेट बैकएंड तैनात करके उसकी Worker URL यहाँ डालेंगे। AI को संदेश केवल Send दबाने पर भेजा जाएगा। डिवाइस/फ़ाइल एक्सेस OFF और ट्रेडिंग/लेन-देन BLOCKED रहेंगे। पासवर्ड, API key या संवेदनशील जानकारी न लिखें।"
+    },
+    hinglish: {
+      languageHelp: "Auto mode: NEXUS AI aapke message ki language pehchaan kar usi mein reply karne ki koshish karega.",
+      messageLabel: "Apna message likhein",
+      placeholder: "Apna sawaal ya zaroorat likhein",
+      send: "Send message", clear: "Chat clear karein",
+      permissionTitle: "Permission zaroori hai",
+      permissionText: "Ye search ek external page kholegi. Search provider ko aapki query aur normal browser request data mil sakta hai.",
+      queryLabel: "Search query", approve: "Approve karke search kholein", cancel: "Cancel",
+      approvalNote: "Permission sirf is ek search ke liye hai. Background search nahi hogi.",
+      greeting: "Namaste! Upar language choose karein. Private backend connect hone ke baad message bhejkar AI use kar sakte hain. Abhi ye limited local prototype hai.",
+      foot: "Prototype mode: real AI tabhi connect hoga jab aap private backend deploy karke Worker URL yahan daalenge. AI ko message sirf Send dabane par jayega. Device/file access OFF aur trading/transactions BLOCKED rahenge. Password, API key ya sensitive info na likhein."
+    }
+  };
+
+  function detectLanguage(text) {
+    if (/[ऀ-ॿ]/.test(text)) return "hi";
+    // A lightweight heuristic, not a perfect language detector.
+    if (/\b(haan|nahi|kya|kaise|mujhe|aap|hai|hain|karna|chahiye|batao|kyun|mera|meri|mein|mere|isko|isme|kripya)\b/i.test(text)) return "hinglish";
+    return "en";
+  }
+  function selectedLanguage(text) {
+    const chosen = languageSelect.value;
+    return chosen === "auto" ? detectLanguage(text) : chosen;
+  }
+  function languagePrompt(text) {
+    const lang = selectedLanguage(text);
+    const rules = {
+      hi: "Reply in natural Hindi using Devanagari script. Keep technical product names as needed. If the user asks for another language, follow that request.",
+      hinglish: "Reply in natural Hinglish (Hindi written in Latin letters mixed with common English terms). If the user asks for another language, follow that request.",
+      en: "Reply in clear English. If the user asks for another language, follow that request."
+    };
+    return { language: lang, instruction: rules[lang] };
+  }
+  function log(text) {
+    const row = document.createElement("div");
+    row.className = "log";
+    row.textContent = new Date().toLocaleTimeString() + " — " + text;
+    logBox.prepend(row);
+  }
+  function bubble(text, who="bot") {
+    const el = document.createElement("div");
+    el.className = "msg " + who;
+    el.textContent = text;
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+  }
+  function applyLanguageUI() {
+    const lang = languageSelect.value === "auto" ? "hinglish" : languageSelect.value;
+    const t = ui[lang];
+    $("languageHelp").textContent = t.languageHelp;
+    $("messageLabel").textContent = t.messageLabel;
+    $("message").placeholder = t.placeholder;
+    $("sendBtn").textContent = t.send;
+    $("clearBtn").textContent = t.clear;
+    $("approvalPanel").querySelector("h2").textContent = t.permissionTitle;
+    $("approvalPanel").querySelector("p").textContent = t.permissionText;
+    $("query").previousElementSibling.textContent = t.queryLabel;
+    $("approveBtn").textContent = t.approve;
+    $("cancelBtn").textContent = t.cancel;
+    $("approvalPanel").querySelector(".muted").textContent = t.approvalNote;
+    $("footNote").textContent = t.foot;
+  }
+  function localReply(text) {
+    const lang = selectedLanguage(text);
+    const replies = {
+      hi: {
+        stopped: "इमरजेंसी स्टॉप चालू है। चैट और टूल रोक दिए गए हैं। केवल लोकल चैट फिर शुरू करने के लिए Resume local chat दबाएँ।",
+        search: "इंटरनेट खोजने से पहले आपकी अनुमति ज़रूरी है। नीचे सवाल जाँचें, फिर अनुमति दें या रद्द करें। अभी कोई नेटवर्क अनुरोध नहीं भेजा गया।",
+        hello: "नमस्ते! मैं अभी सीमित लोकल प्रोटोटाइप हूँ। असली AI जोड़ने के लिए प्राइवेट बैकएंड सेट करना होगा।",
+        stock: "इस प्रोटोटाइप में लाइव शेयर कीमतें या वित्तीय सलाह उपलब्ध नहीं हैं।",
+        help: "अभी मैं सीमित लोकल जवाब दे सकता हूँ और अनुमति मिलने पर बाहरी सर्च पेज खोल सकता हूँ। असली AI बैकएंड अभी कनेक्ट नहीं है।",
+        fallback: "अभी असली AI बैकएंड कनेक्ट नहीं है। Cloudflare Worker सेटअप करके उसका URL जोड़ें। चाहें तो 'Search ...' लिखें; खोज से पहले अनुमति माँगी जाएगी।"
+      },
+      hinglish: {
+        stopped: "Emergency stop active hai. Chat aur tools pause hain. Sirf local chat resume karne ke liye Resume local chat dabayein.",
+        search: "Internet search se pehle aapki permission zaroori hai. Neeche query check karein, phir approve ya cancel karein. Abhi koi network request nahi bheji gayi.",
+        hello: "Namaste! Main abhi limited local prototype hoon. Real AI ke liye private backend connect karna hoga.",
+        stock: "Is prototype mein live stock prices ya financial advice available nahi hai.",
+        help: "Abhi main limited local replies de sakta hoon aur approval ke baad external search page khol sakta hoon. Real AI backend abhi connected nahi hai.",
+        fallback: "Abhi real AI backend connect nahi hai. Cloudflare Worker setup karke uska URL add karein. Aap 'Search ...' likh sakte hain; pehle approval maanga jayega."
+      },
+      en: {
+        stopped: "Emergency stop is active. Chat and tools are paused. Press Resume local chat to resume local chat only.",
+        search: "Internet search requires your approval. Review the query below and approve or cancel it. No network request has been sent yet.",
+        hello: "Hello! I am currently a limited local prototype. A private backend must be connected for real AI.",
+        stock: "Live stock prices and financial advice are not available in this prototype.",
+        help: "I can provide limited local replies and open an external search page after approval. The real AI backend is not connected yet.",
+        fallback: "The real AI backend is not connected yet. Deploy the Cloudflare Worker and add its URL. You can type 'Search ...'; approval will be requested first."
+      }
+    };
+    const r = replies[lang];
+    if (stopped) return r.stopped;
+    if (/(search|web|internet|latest|news|today|current|abhi|taaza|खोज|समाचार|खबर)/i.test(text)) {
+      const cleaned = text.replace(/^(please\s+)?(search|web search|google|internet par search|find|खोजो|सर्च)\s*/i, "").trim();
+      pendingQuery = cleaned || text;
+      $("query").value = pendingQuery.slice(0,180);
+      $("approvalPanel").classList.remove("hidden");
+      log("Search approval requested; no network request made.");
+      return r.search;
+    }
+    if (/(hello|hi|namaste|hey|नमस्ते|हैलो)/i.test(text)) return r.hello;
+    if (/(stock|share|market|nifty|sensex|शेयर|शेयर बाजार)/i.test(text)) return r.stock;
+    if (/(help|what can|kya kar|madad|मदद|क्या कर सकते)/i.test(text)) return r.help;
+    return r.fallback;
+  }
+
+  async function askAI(text) {
+    const prompt = languagePrompt(text);
+    // Explicit user action (Send) is the only trigger for this request.
+    const response = await fetch(AI_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        language: prompt.language,
+        languageInstruction: prompt.instruction
+      })
+    });
+    if (!response.ok) throw new Error("AI request failed (" + response.status + ")");
+    const data = await response.json();
+    if (typeof data.reply !== "string") throw new Error("Unexpected response from AI backend");
+    return data.reply;
+  }
+
+  async function sendMessage() {
+    const text = $("message").value.trim();
+    if (!text) return;
+    bubble(text, "user"); $("message").value = "";
+    if (stopped) { bubble(localReply(text)); return; }
+    if (AI_ENDPOINT.startsWith("https://") && !AI_ENDPOINT.includes("PASTE_YOUR_CLOUDFLARE_WORKER_URL_HERE")) {
+      const thinking = selectedLanguage(text) === "hi" ? "जवाब तैयार हो रहा है…" : selectedLanguage(text) === "hinglish" ? "Reply aa raha hai…" : "Thinking…";
+      bubble(thinking);
+      const pendingBubble = chat.lastElementChild;
+      $("sendBtn").disabled = true;
+      try {
+        const answer = await askAI(text);
+        pendingBubble.textContent = answer;
+        log("AI reply received; request was triggered by Send.");
+      } catch (err) {
+        pendingBubble.textContent = "AI connection error: " + err.message + ". Check Worker URL/deployment. No device or file permissions were used.";
+        log("AI request failed: " + err.message);
+      } finally {
+        $("sendBtn").disabled = false;
+      }
+    } else {
+      bubble(localReply(text));
+    }
+  }
+
+  $("sendBtn").addEventListener("click", sendMessage);
+  $("message").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("sendBtn").click(); }
+  });
+  languageSelect.addEventListener("change", applyLanguageUI);
+  $("approveBtn").addEventListener("click", () => {
+    if (stopped) { log("Search blocked: emergency stop is active."); bubble(localReply("search")); return; }
+    const q = $("query").value.trim().slice(0,180);
+    if (!q) { bubble("Search blocked: query is empty."); return; }
+    log("User approved one search handoff: " + q);
+    $("approvalPanel").classList.add("hidden");
+    window.open("https://www.google.com/search?q=" + encodeURIComponent(q), "_blank", "noopener,noreferrer");
+    bubble(selectedLanguage(q) === "hi" ? "आपकी अनुमति के बाद सर्च पेज खोलने की कोशिश की गई। ऐप परिणामों को अपने-आप नहीं पढ़ती।" : selectedLanguage(q) === "hinglish" ? "Aapki approval ke baad search page kholne ki koshish ki gayi. App results ko automatically read nahi karti." : "The search page was opened after your approval. The app does not automatically read results.");
+    pendingQuery = "";
+  });
+  $("cancelBtn").addEventListener("click", () => {
+    $("approvalPanel").classList.add("hidden");
+    log("Search cancelled by user; no network request made.");
+    bubble(selectedLanguage("") === "hi" ? "खोज रद्द कर दी गई। कोई सर्च अनुरोध नहीं भेजा गया।" : "Search cancelled. No search request was sent.");
+    pendingQuery = "";
+  });
+  $("stopBtn").addEventListener("click", () => {
+    stopped = true;
+    $("netStatus").textContent = "STOPPED";
+    $("netStatus").className = "blocked";
+    $("stopState").textContent = "Emergency stop active. New actions blocked. Pending search cancelled.";
+    $("approvalPanel").classList.add("hidden");
+    $("resumeBtn").classList.remove("hidden");
+    log("Emergency stop activated.");
+  });
+  $("resumeBtn").addEventListener("click", () => {
+    stopped = false;
+    $("netStatus").textContent = "OFF";
+    $("netStatus").className = "off";
+    $("stopState").textContent = "Local chat resumed. Online research still requires per-search approval.";
+    $("resumeBtn").classList.add("hidden");
+    log("Local chat resumed. Online research still requires per-search approval.");
+  });
+  $("clearBtn").addEventListener("click", () => { chat.innerHTML = ""; log("Chat display cleared."); });
+  $("clearLogBtn").addEventListener("click", () => { logBox.innerHTML = ""; });
+  applyLanguageUI();
+})();
+</script>
+</body>
+</html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#101827">
 <title>NEXUS AI — Permission-first assistant</title>
